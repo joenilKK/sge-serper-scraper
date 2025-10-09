@@ -344,11 +344,24 @@ function findFirstDomainMatch(items, domain) {
     if (!target) return null;
     for (const item of items) {
         const host = extractHostname(item.link || '');
+        
+        // Check for exact match
         const exactMatch = host === target;
+        
+        // Check for subdomain match (e.g., sub.example.com matches example.com)
         const subdomainMatch = host.endsWith(`.${target}`);
         
-        if (exactMatch || subdomainMatch) {
-            console.log(`      ✓ MATCH FOUND: "${host}" matches "${target}" (${exactMatch ? 'exact' : 'subdomain'})`);
+        // Check for partial word match (e.g., lkyurology matches lkyurology.com)
+        // Split both host and target by dots and check if target words are contained in host
+        const hostParts = host.split('.');
+        const targetParts = target.split('.');
+        const partialMatch = targetParts.every(targetPart => 
+            hostParts.some(hostPart => hostPart.includes(targetPart))
+        );
+        
+        if (exactMatch || subdomainMatch || partialMatch) {
+            let matchType = exactMatch ? 'exact' : (subdomainMatch ? 'subdomain' : 'partial');
+            console.log(`      ✓ MATCH FOUND: "${host}" matches "${target}" (${matchType})`);
             return {
                 link: item.link || '',
                 title: item.title || '',
