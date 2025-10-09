@@ -17,6 +17,41 @@ export class SerperSearchProvider extends BaseSearchProvider {
     }
 
     /**
+     * Convert location name to country code for Serper API
+     * @param {string} location - Location name or code
+     * @returns {string} - Country code
+     */
+    normalizeLocation(location) {
+        if (!location) return undefined;
+        
+        // Common location mappings
+        const locationMap = {
+            'singapore': 'sg',
+            'united states': 'us',
+            'usa': 'us',
+            'united kingdom': 'gb',
+            'uk': 'gb',
+            'australia': 'au',
+            'canada': 'ca',
+            'india': 'in',
+            'malaysia': 'my',
+            'indonesia': 'id',
+            'philippines': 'ph',
+            'thailand': 'th',
+            'vietnam': 'vn',
+            'hong kong': 'hk',
+            'japan': 'jp',
+            'south korea': 'kr',
+            'china': 'cn'
+        };
+        
+        const normalized = location.toLowerCase().trim();
+        
+        // Return mapped value or assume it's already a country code
+        return locationMap[normalized] || (location.length === 2 ? location.toLowerCase() : location);
+    }
+
+    /**
      * Perform a search query with retry logic
      * @param {string} query - Search query
      * @param {Object} options - Search options
@@ -27,10 +62,18 @@ export class SerperSearchProvider extends BaseSearchProvider {
         
         const requestBody = {
             q: query,
-            page: page + 1, // Serper.dev uses 1-based page numbering
-            gl: location,
-            hl: language
+            page: page + 1 // Serper.dev uses 1-based page numbering
         };
+
+        // Add location (gl) if provided - convert to country code
+        if (location) {
+            requestBody.gl = this.normalizeLocation(location);
+        }
+
+        // Add language (hl) if provided
+        if (language) {
+            requestBody.hl = language;
+        }
 
         let lastError;
         
