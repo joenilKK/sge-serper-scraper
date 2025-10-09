@@ -1,0 +1,14 @@
+{
+  "queries": [
+    "hematuria treatment singapore",
+    "interstitial cystitis treatment singapore"
+  ],
+  "domain":"https://lkyurology.com/",
+  "provider": "serper",
+  "mode": "search",
+  "maxResults": 100,
+  "location": "Singapore",
+  "language": "en",
+  "outputDir": "./output",
+  "providerKey": ""
+}

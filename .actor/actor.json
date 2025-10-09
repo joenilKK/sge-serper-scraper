@@ -1,0 +1,12 @@
+{
+	"actorSpecification": 1,
+	"name": "serp-scraper",
+	"title": "Empty JavaScript project",
+	"description": "Empty project in JavaScript.",
+	"version": "0.0",
+	"buildTag": "latest",
+	"meta": {
+		"templateId": "js-empty"
+	},
+	"dockerfile": "../Dockerfile"
+}
