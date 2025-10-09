@@ -23,7 +23,7 @@ export class SerperMapsProvider extends BaseMapsProvider {
      * @returns {Promise<Object>} - Normalized maps results
      */
     async search(query, options = {}) {
-        const { page = 0, location = 'United States', language = 'en', ll } = options;
+        const { page = 0, location, language, ll } = options;
         
         const requestBody = {
             q: query,

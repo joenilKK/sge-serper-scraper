@@ -23,7 +23,7 @@ export class SerperSearchProvider extends BaseSearchProvider {
      * @returns {Promise<Object>} - Normalized search results
      */
     async search(query, options = {}) {
-        const { page = 0, location = 'United States', language = 'en' } = options;
+        const { page = 0, location, language } = options;
         
         const requestBody = {
             q: query,
