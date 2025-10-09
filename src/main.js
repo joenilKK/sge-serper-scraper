@@ -66,8 +66,18 @@ for (const query of queries) {
         let totalResults = 0;
         let pageCount = 0;
         
-        // Track domain match state per query
-        let domainFound = false;
+        // Build list of domains to track (support both single and multiple domains)
+        const domainsToTrack = [];
+        if (input.domain) {
+            domainsToTrack.push(input.domain);
+        }
+        if (input.domains && Array.isArray(input.domains)) {
+            domainsToTrack.push(...input.domains);
+        }
+        
+        // Track which domains have been found
+        const domainMatches = new Map(); // domain -> match data or null
+        domainsToTrack.forEach(domain => domainMatches.set(normalizeDomain(domain), null));
 
         // Get paginated results
         for await (const result of provider.getPaginatedResults(query, searchOptions)) {
@@ -80,18 +90,25 @@ for (const query of queries) {
                 console.log(`  Page ${result.page}: ${result.items.length} results (Total: ${totalResults}/${maxResults})`);
             }
             
-            // If domain filtering is enabled, try to find the first occurrence and early-stop.
-            // When domain is specified, skip saving per-page files to keep exactly one JSON per query.
-            if (input.domain) {
-                const match = findFirstDomainMatch(result.items, input.domain);
-                if (match) {
-                    const matchData = await saveDomainMatchSummary(query, input.domain, match, outputDir);
-                    // Push to Apify dataset if available
-                    if (Actor) {
-                        await Actor.pushData(matchData);
+            // If domain filtering is enabled, check for matches
+            if (domainsToTrack.length > 0) {
+                // Check each domain that hasn't been found yet
+                for (const [normalizedDomain, currentMatch] of domainMatches.entries()) {
+                    if (currentMatch === null) {
+                        // Find original domain string for this normalized domain
+                        const originalDomain = domainsToTrack.find(d => normalizeDomain(d) === normalizedDomain);
+                        const match = findFirstDomainMatch(result.items, originalDomain);
+                        if (match) {
+                            domainMatches.set(normalizedDomain, { domain: originalDomain, match });
+                            console.log(`  ✓ Domain match found for "${originalDomain}" on page ${result.page} at position ${match.position}`);
+                        }
                     }
-                    console.log(`  ✓ Domain match found for "${input.domain}" on page ${result.page} at position ${match.position}. Stopping this query.`);
-                    domainFound = true;
+                }
+                
+                // Check if all domains have been found
+                const allFound = Array.from(domainMatches.values()).every(match => match !== null);
+                if (allFound) {
+                    console.log(`  ✓ All domains found. Stopping this query.`);
                     break;
                 }
             } else {
@@ -109,15 +126,27 @@ for (const query of queries) {
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
         
-        // If domain mode was enabled and no match found across all pages, save a single not-found summary
-        if (input.domain) {
-            if (!domainFound) {
-                const noMatchData = await saveDomainNoMatchSummary(query, input.domain, outputDir);
-                // Push to Apify dataset if available
-                if (Actor) {
-                    await Actor.pushData(noMatchData);
+        // Save results for each tracked domain
+        if (domainsToTrack.length > 0) {
+            for (const [normalizedDomain, matchData] of domainMatches.entries()) {
+                const originalDomain = domainsToTrack.find(d => normalizeDomain(d) === normalizedDomain);
+                
+                if (matchData && matchData.match) {
+                    // Domain was found
+                    const savedData = await saveDomainMatchSummary(query, originalDomain, matchData.match, outputDir);
+                    // Push to Apify dataset if available
+                    if (Actor) {
+                        await Actor.pushData(savedData);
+                    }
+                } else {
+                    // Domain was not found
+                    const savedData = await saveDomainNoMatchSummary(query, originalDomain, outputDir);
+                    // Push to Apify dataset if available
+                    if (Actor) {
+                        await Actor.pushData(savedData);
+                    }
+                    console.log(`  ✗ No results matched domain "${originalDomain}"`);
                 }
-                console.log(`  ✗ No results matched domain "${input.domain}". Wrote not-found summary.`);
             }
         } else {
             console.log(`✓ Completed query "${query}": ${totalResults} total results across ${pageCount} pages`);
@@ -140,7 +169,7 @@ for (const query of queries) {
 }
 
 console.log('\n🎉 All queries processed successfully!');
-console.log(`Results saved to: ${outputDir}`);
+// console.log(`Results saved to: ${outputDir}`);
 
 // Exit Apify actor if running on Apify
 if (Actor) {
@@ -166,6 +195,7 @@ async function getInput() {
         // Simple command line input parsing
         const input = {
             queries: [],
+            domains: [],
             provider: 'serper',
             mode: 'search',
             maxResults: 500,
@@ -181,6 +211,11 @@ async function getInput() {
                     break;
                 case '--domain':
                     input.domain = args[++i];
+                    break;
+                case '--domains':
+                    // Support comma-separated domains
+                    const domainList = args[++i].split(',').map(d => d.trim());
+                    input.domains.push(...domainList);
                     break;
                 case '--provider':
                 case '-p':

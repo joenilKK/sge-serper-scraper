@@ -3,7 +3,10 @@
     "hematuria treatment singapore",
     "interstitial cystitis treatment singapore"
   ],
-  "domain":"https://lkyurology.com/",
+  "domains": [
+    "https://lkyurology.com/",
+    "https://www.healthhub.sg/"
+  ],
   "provider": "serper",
   "mode": "search",
   "maxResults": 100,
