@@ -51,12 +51,19 @@ if (!queries || queries.length === 0) {
     throw new Error('No queries provided. Please add at least one search query.');
 }
 
+// Validate domain format if provided
+if (input.domain) {
+    const domainPattern = /^(?:www\.)?[a-zA-Z0-9][-a-zA-Z0-9]*(?:\.[a-zA-Z0-9][-a-zA-Z0-9]*)*$/;
+    if (!domainPattern.test(input.domain)) {
+        throw new Error('Invalid domain format. Use formats like: lkyurology.com, www.lkyurology.com, or lkyurology (no http://, https://, or paths)');
+    }
+}
+
 const maxResults = input.maxResults ?? 500;
 const searchOptions = {
     location: input.location || 'Singapore',
     language: input.language || 'en',
-    maxResults: maxResults,
-    ll: input.ll // Location coordinates for maps
+    maxResults: maxResults
 };
 
 // Handle unlimited results (0 means unlimited)
@@ -306,7 +313,7 @@ async function saveDomainNoMatchSummary(query, domain, outputDir, reachedMaxResu
         timestamp: new Date().toISOString()
     };
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
-    console.log(`  🔎 Saved domain not-found summary: ${filename}`);
+    //console.log(`  🔎 Saved domain not-found summary: ${filename}`);
     return data;
 }
 
@@ -322,10 +329,12 @@ function extractHostname(url) {
 function normalizeDomain(domain) {
     if (!domain) return '';
     try {
-        // Allow full URLs or bare domains
+        // Input validation ensures clean domains (no http://, https://, or paths)
+        // But handle URLs for backward compatibility
         const parsed = domain.includes('://') ? new URL(domain) : new URL(`https://${domain}`);
         return parsed.hostname.replace(/^www\./i, '').toLowerCase();
     } catch {
+        // Fallback: just remove www. and lowercase
         return domain.replace(/^www\./i, '').toLowerCase();
     }
 }

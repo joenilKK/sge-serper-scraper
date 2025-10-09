@@ -52,17 +52,13 @@
       "editor": "textfield",
       "default": "en"
     },
-    "ll": {
-      "title": "Location Coordinates (Maps only)",
-      "type": "string",
-      "description": "Latitude, longitude and zoom level for maps search (e.g., @40.7207245,-74.1093222,10.61z)",
-      "editor": "textfield"
-    },
     "domain": {
       "title": "Domain Filter",
       "type": "string",
-      "description": "Optional domain to filter and track (e.g., https://lkyurology.com/ or lkyurology.com). When specified, stops at first match and saves summary.",
-      "editor": "textfield"
+      "description": "Optional domain to filter and track. Accepted formats example: lkyurology.com, www.lkyurology.com, or lkyurology. Do NOT include http://, https://, or paths.",
+      "editor": "textfield",
+      "pattern": "^(?:www\\.)?[a-zA-Z0-9][-a-zA-Z0-9]*(?:\\.[a-zA-Z0-9][-a-zA-Z0-9]*)*$",
+      "patternErrorMessage": "Invalid domain format. Use formats like: lkyurology.com, www.lkyurology.com, or lkyurology (no http://, https://, or paths)"
     },
     "maxResults": {
       "title": "Max Results",
