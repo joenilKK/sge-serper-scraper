@@ -43,8 +43,14 @@ if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
 }
 
-// Process queries (support both single query and bulk queries)
-const queries = input.queries || (input.query ? [input.query] : []);
+// Process queries
+const queries = input.queries || [];
+
+// Validate queries
+if (!queries || queries.length === 0) {
+    throw new Error('No queries provided. Please add at least one search query.');
+}
+
 const maxResults = input.maxResults ?? 500;
 const searchOptions = {
     location: input.location || 'Singapore',
@@ -80,9 +86,18 @@ for (const query of queries) {
                 console.log(`  Page ${result.page}: ${result.items.length} results (Total: ${totalResults}/${maxResults})`);
             }
             
+            // Log each item in the current page
+            console.log(`    Items on page ${result.page}:`);
+            result.items.forEach((item, idx) => {
+                const host = extractHostname(item.link || '');
+                console.log(`      [${idx + 1}] Pos ${item.position}: ${host} - ${item.title?.substring(0, 50) || 'No title'}...`);
+            });
+            
             // If domain filtering is enabled, try to find the first occurrence and early-stop.
             // When domain is specified, skip saving per-page files to keep exactly one JSON per query.
             if (input.domain) {
+                const targetDomain = normalizeDomain(input.domain);
+                console.log(`    Checking for domain match: "${targetDomain}"`);
                 const match = findFirstDomainMatch(result.items, input.domain);
                 if (match) {
                     const matchData = await saveDomainMatchSummary(query, input.domain, match, outputDir);
@@ -227,8 +242,9 @@ async function getInput() {
     }
     
     // Return default config if no input found
+    console.log('No input found. Please provide queries in config.json or via command line.');
     return {
-        queries: ['example search query'],
+        queries: [],
         provider: 'serper',
         mode: 'search',
         maxResults: 500,
@@ -311,7 +327,11 @@ function findFirstDomainMatch(items, domain) {
     if (!target) return null;
     for (const item of items) {
         const host = extractHostname(item.link || '');
-        if (host === target || host.endsWith(`.${target}`)) {
+        const exactMatch = host === target;
+        const subdomainMatch = host.endsWith(`.${target}`);
+        
+        if (exactMatch || subdomainMatch) {
+            console.log(`      ✓ MATCH FOUND: "${host}" matches "${target}" (${exactMatch ? 'exact' : 'subdomain'})`);
             return {
                 link: item.link || '',
                 title: item.title || '',

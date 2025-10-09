@@ -1,7 +1,6 @@
 {
   "queries": [
-    "hematuria treatment singapore",
-    "interstitial cystitis treatment singapore"
+    "delayed ejaculation singapore"
   ],
   "domain":"https://lkyurology.com/",
   "provider": "serper",
@@ -10,5 +9,5 @@
   "location": "Singapore",
   "language": "en",
   "outputDir": "./output",
-  "providerKey": ""
+  "providerKey": "418354aeb3b9d8ea19b7b446c1582ef1ffc6d05d"
 }

@@ -12,20 +12,15 @@
       "enumTitles": ["Search", "Maps"],
       "default": "search"
     },
-    "query": {
-      "title": "Search Query",
-      "type": "string",
-      "description": "Single search query to scrape",
-      "editor": "textfield"
-    },
     "queries": {
-      "title": "Bulk Search Queries",
+      "title": "Search Queries",
       "type": "array",
-      "description": "Multiple search queries to scrape (alternative to single query)",
+      "description": "One or more search queries to scrape. Add as many as you need.",
       "editor": "stringList",
       "items": {
         "type": "string"
-      }
+      },
+      "minItems": 1
     },
     "provider": {
       "title": "SERP Provider",
@@ -77,13 +72,6 @@
       "default": 100,
       "minimum": 0,
       "maximum": 10000
-    },
-    "outputDir": {
-      "title": "Output Directory",
-      "type": "string",
-      "description": "Directory path to save results (default: ./output)",
-      "editor": "textfield",
-      "default": "./output"
     }
   },
   "required": []
