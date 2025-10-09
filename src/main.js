@@ -274,10 +274,11 @@ async function saveDomainNoMatchSummary(query, domain, outputDir) {
     const filename = `${safeQuery}_match_${safeDomain}_${timestamp}.json`;
     const filepath = path.join(outputDir, filename);
     const data = {
-        query,
+        keyword: query,
         domain: normalizeDomain(domain),
-        found: false,
-        match: null,
+        link: null,
+        title: null,
+        rank: null,
         timestamp: new Date().toISOString()
     };
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
@@ -328,14 +329,11 @@ async function saveDomainMatchSummary(query, domain, match, outputDir) {
     const filename = `${safeQuery}_match_${safeDomain}_${timestamp}.json`;
     const filepath = path.join(outputDir, filename);
     const data = {
-        query,
+        keyword: query,
         domain: normalizeDomain(domain),
-        found: true,
-        match: {
-            link: match.link,
-            title: match.title,
-            position: match.position
-        },
+        link: match.link,
+        title: match.title,
+        rank: match.position,
         timestamp: new Date().toISOString()
     };
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
