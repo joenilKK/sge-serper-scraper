@@ -64,19 +64,10 @@
       "editor": "textfield"
     },
     "domain": {
-      "title": "Domain Filter (Single)",
+      "title": "Domain Filter",
       "type": "string",
-      "description": "Optional single domain to filter and track (e.g., https://lkyurology.com/ or lkyurology.com). Use either this or 'domains' for multiple.",
+      "description": "Optional domain to filter and track (e.g., https://lkyurology.com/ or lkyurology.com). When specified, stops at first match and saves summary.",
       "editor": "textfield"
-    },
-    "domains": {
-      "title": "Domain Filters (Multiple)",
-      "type": "array",
-      "description": "Optional multiple domains to filter and track. Each domain will be tracked separately and saved with its own result.",
-      "editor": "stringList",
-      "items": {
-        "type": "string"
-      }
     },
     "maxResults": {
       "title": "Max Results",
