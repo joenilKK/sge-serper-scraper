@@ -78,6 +78,11 @@ for (const query of queries) {
         // Track which domains have been found
         const domainMatches = new Map(); // domain -> match data or null
         domainsToTrack.forEach(domain => domainMatches.set(normalizeDomain(domain), null));
+        
+        // Log domains being tracked
+        if (domainsToTrack.length > 0) {
+            console.log(`  Tracking ${domainsToTrack.length} domain(s): ${domainsToTrack.join(', ')}`);
+        }
 
         // Get paginated results
         for await (const result of provider.getPaginatedResults(query, searchOptions)) {
@@ -105,10 +110,12 @@ for (const query of queries) {
                     }
                 }
                 
-                // Check if all domains have been found
-                const allFound = Array.from(domainMatches.values()).every(match => match !== null);
-                if (allFound) {
-                    console.log(`  ✓ All domains found. Stopping this query.`);
+                // Count how many domains have been found
+                const foundCount = Array.from(domainMatches.values()).filter(match => match !== null).length;
+                
+                // Stop immediately if all domains have been found
+                if (foundCount === domainsToTrack.length) {
+                    console.log(`  ✓ All ${foundCount} domain(s) found. Stopping this query.`);
                     break;
                 }
             } else {
