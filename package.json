@@ -1,12 +1,14 @@
 {
 	"name": "serp-scraper",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"type": "module",
-	"description": "Local SERP scraper for Google Search and Maps results.",
+	"description": "SERP scraper for Google Search and Maps results using Serper.dev API. Works on Apify platform and as standalone Node.js app.",
 	"engines": {
 		"node": ">=18.0.0"
 	},
-	"dependencies": {},
+	"dependencies": {
+		"apify": "^3.0.0"
+	},
 	"devDependencies": {
 		"@apify/eslint-config": "^1.0.0",
 		"eslint": "^9.29.0",

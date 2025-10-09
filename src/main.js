@@ -1,10 +1,20 @@
-// Local SERP Scraper - Standalone Node.js application
+// SERP Scraper - Works in both Apify and standalone Node.js
 import { providerFactory } from './providers/provider-factory.js';
 import fs from 'fs';
 import path from 'path';
 
-// Get input from command line arguments or config file
-const input = await getLocalInput();
+// Dynamic import for Apify SDK (only when running on Apify)
+let Actor = null;
+try {
+    const apifyModule = await import('apify');
+    Actor = apifyModule.Actor;
+} catch (error) {
+    // Apify SDK not available - running locally
+    console.log('Running in local mode (Apify SDK not found)');
+}
+
+// Get input from Apify, command line arguments, or config file
+const input = await getInput();
 
 // Validate input
 if (!input) {
@@ -75,7 +85,11 @@ for (const query of queries) {
             if (input.domain) {
                 const match = findFirstDomainMatch(result.items, input.domain);
                 if (match) {
-                    await saveDomainMatchSummary(query, input.domain, match, outputDir);
+                    const matchData = await saveDomainMatchSummary(query, input.domain, match, outputDir);
+                    // Push to Apify dataset if available
+                    if (Actor) {
+                        await Actor.pushData(matchData);
+                    }
                     console.log(`  ✓ Domain match found for "${input.domain}" on page ${result.page} at position ${match.position}. Stopping this query.`);
                     domainFound = true;
                     break;
@@ -98,7 +112,11 @@ for (const query of queries) {
         // If domain mode was enabled and no match found across all pages, save a single not-found summary
         if (input.domain) {
             if (!domainFound) {
-                await saveDomainNoMatchSummary(query, input.domain, outputDir);
+                const noMatchData = await saveDomainNoMatchSummary(query, input.domain, outputDir);
+                // Push to Apify dataset if available
+                if (Actor) {
+                    await Actor.pushData(noMatchData);
+                }
                 console.log(`  ✗ No results matched domain "${input.domain}". Wrote not-found summary.`);
             }
         } else {
@@ -124,9 +142,24 @@ for (const query of queries) {
 console.log('\n🎉 All queries processed successfully!');
 console.log(`Results saved to: ${outputDir}`);
 
-// Helper functions for local operation
-async function getLocalInput() {
-    // Try to get input from command line arguments first
+// Exit Apify actor if running on Apify
+if (Actor) {
+    await Actor.exit();
+}
+
+// Helper functions
+async function getInput() {
+    // First, check if running on Apify
+    if (Actor) {
+        await Actor.init();
+        const apifyInput = await Actor.getInput();
+        if (apifyInput) {
+            console.log('Using Apify input');
+            return apifyInput;
+        }
+    }
+    
+    // Try to get input from command line arguments
     const args = process.argv.slice(2);
     
     if (args.length > 0) {
@@ -217,8 +250,21 @@ async function saveResultsToFile(items, query, page, outputDir) {
         items: items
     };
     
+    // Save to file system
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
     console.log(`  📁 Saved ${items.length} results to: ${filename}`);
+    
+    // Push each item to Apify dataset if available
+    if (Actor) {
+        for (const item of items) {
+            await Actor.pushData({
+                query: query,
+                page: page,
+                timestamp: data.timestamp,
+                ...item
+            });
+        }
+    }
 }
 
 async function saveDomainNoMatchSummary(query, domain, outputDir) {
@@ -236,6 +282,7 @@ async function saveDomainNoMatchSummary(query, domain, outputDir) {
     };
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
     console.log(`  🔎 Saved domain not-found summary: ${filename}`);
+    return data;
 }
 
 function extractHostname(url) {
@@ -293,4 +340,5 @@ async function saveDomainMatchSummary(query, domain, match, outputDir) {
     };
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
     console.log(`  🔎 Saved domain match summary: ${filename}`);
+    return data;
 }

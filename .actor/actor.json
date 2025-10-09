@@ -1,12 +1,13 @@
 {
 	"actorSpecification": 1,
 	"name": "serp-scraper",
-	"title": "Empty JavaScript project",
-	"description": "Empty project in JavaScript.",
-	"version": "0.0",
+	"title": "SERP Scraper with Domain Tracking",
+	"description": "Scrapes search engine results (Google, Maps) using Serper.dev API. Supports bulk queries, domain filtering, and position tracking.",
+	"version": "1.0",
 	"buildTag": "latest",
 	"meta": {
 		"templateId": "js-empty"
 	},
+	"input": "./input_schema.json",
 	"dockerfile": "../Dockerfile"
 }

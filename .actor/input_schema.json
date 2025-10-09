@@ -40,14 +40,15 @@
       "title": "Provider API Key",
       "type": "string",
       "description": "API key for the selected provider (can also be set via PROVIDER_KEY environment variable)",
-      "editor": "textfield"
+      "editor": "textfield",
+      "isSecret": true
     },
     "location": {
       "title": "Search Location",
       "type": "string",
       "description": "Geographic location for search results",
       "editor": "textfield",
-      "default": "United States"
+      "default": "Singapore"
     },
     "language": {
       "title": "Search Language",
@@ -87,3 +88,4 @@
   },
   "required": []
 }
+
