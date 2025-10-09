@@ -100,7 +100,9 @@ for (const query of queries) {
                 console.log(`    Checking for domain match: "${targetDomain}"`);
                 const match = findFirstDomainMatch(result.items, input.domain);
                 if (match) {
-                    const matchData = await saveDomainMatchSummary(query, input.domain, match, outputDir);
+                    // Check if we've reached or exceeded max results
+                    const hasReachedMaxResults = !isUnlimited && totalResults >= maxResults;
+                    const matchData = await saveDomainMatchSummary(query, input.domain, match, outputDir, hasReachedMaxResults, maxResults);
                     // Push to Apify dataset if available
                     if (Actor) {
                         await Actor.pushData(matchData);
@@ -127,7 +129,9 @@ for (const query of queries) {
         // If domain mode was enabled and no match found across all pages, save a single not-found summary
         if (input.domain) {
             if (!domainFound) {
-                const noMatchData = await saveDomainNoMatchSummary(query, input.domain, outputDir);
+                // Check if we reached max results without finding the domain
+                const reachedMaxResults = !isUnlimited && totalResults >= maxResults;
+                const noMatchData = await saveDomainNoMatchSummary(query, input.domain, outputDir, reachedMaxResults, maxResults);
                 // Push to Apify dataset if available
                 if (Actor) {
                     await Actor.pushData(noMatchData);
@@ -283,18 +287,22 @@ async function saveResultsToFile(items, query, page, outputDir) {
     }
 }
 
-async function saveDomainNoMatchSummary(query, domain, outputDir) {
+async function saveDomainNoMatchSummary(query, domain, outputDir, reachedMaxResults = false, maxResults = 100) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const safeQuery = query.replace(/[^a-zA-Z0-9]/g, '_');
     const safeDomain = normalizeDomain(domain).replace(/[^a-zA-Z0-9.-]/g, '_');
     const filename = `${safeQuery}_match_${safeDomain}_${timestamp}.json`;
     const filepath = path.join(outputDir, filename);
+    
+    // If we reached max results without finding the domain, show ">maxResults" instead of null
+    const rankValue = reachedMaxResults ? `>${maxResults}` : null;
+    
     const data = {
         keyword: query,
         domain: normalizeDomain(domain),
         link: null,
         title: null,
-        rank: null,
+        rank: rankValue,
         timestamp: new Date().toISOString()
     };
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
@@ -342,15 +350,15 @@ function findFirstDomainMatch(items, domain) {
     return null;
 }
 
-async function saveDomainMatchSummary(query, domain, match, outputDir) {
+async function saveDomainMatchSummary(query, domain, match, outputDir, hasReachedMaxResults = false, maxResults = 100) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const safeQuery = query.replace(/[^a-zA-Z0-9]/g, '_');
     const safeDomain = normalizeDomain(domain).replace(/[^a-zA-Z0-9.-]/g, '_');
     const filename = `${safeQuery}_match_${safeDomain}_${timestamp}.json`;
     const filepath = path.join(outputDir, filename);
     
-    // Format rank as ">100" if position is 100 or greater
-    const formattedRank = match.position >= 100 ? ">100" : match.position;
+    // Format rank as ">maxResults" if we've reached the max results limit
+    const formattedRank = hasReachedMaxResults ? `>${maxResults}` : match.position;
     
     const data = {
         keyword: query,
