@@ -306,7 +306,7 @@ async function saveDomainNoMatchSummary(query, domain, outputDir, reachedMaxResu
     
     const data = {
         keyword: query,
-        domain: normalizeDomain(domain),
+        domain: domain,
         link: null,
         title: null,
         rank: rankValue,
@@ -384,7 +384,7 @@ async function saveDomainMatchSummary(query, domain, match, outputDir, hasReache
     
     const data = {
         keyword: query,
-        domain: normalizeDomain(domain),
+        domain: domain,
         link: match.link,
         title: match.title,
         rank: formattedRank,
