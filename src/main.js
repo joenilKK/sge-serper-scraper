@@ -357,6 +357,6 @@ async function saveDomainMatchSummary(query, domain, match, outputDir) {
         timestamp: new Date().toISOString()
     };
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
-    console.log(`  🔎 Saved domain match summary: ${filename}`);
+   // console.log(`  🔎 Saved domain match summary: ${filename}`);
     return data;
 }
