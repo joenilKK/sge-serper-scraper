@@ -348,15 +348,19 @@ async function saveDomainMatchSummary(query, domain, match, outputDir) {
     const safeDomain = normalizeDomain(domain).replace(/[^a-zA-Z0-9.-]/g, '_');
     const filename = `${safeQuery}_match_${safeDomain}_${timestamp}.json`;
     const filepath = path.join(outputDir, filename);
+    
+    // Format rank as ">100" if position is 100 or greater
+    const formattedRank = match.position >= 100 ? ">100" : match.position;
+    
     const data = {
         keyword: query,
         domain: normalizeDomain(domain),
         link: match.link,
         title: match.title,
-        rank: match.position,
+        rank: formattedRank,
         timestamp: new Date().toISOString()
     };
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
-   // console.log(`  🔎 Saved domain match summary: ${filename}`);
+    // console.log(`  🔎 Saved domain match summary: ${filename}`);
     return data;
 }
