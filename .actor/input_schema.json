@@ -55,10 +55,9 @@
     "domain": {
       "title": "Domain Filter",
       "type": "string",
-      "description": "Optional domain to filter and track. Accepted formats example: lkyurology.com, www.lkyurology.com, or lkyurology. Do NOT include http://, https://, or paths.",
+      "description": "Optional domain to filter and track. Accepted formats: lkyurology.com, www.lkyurology.com, or lkyurology. Do NOT include http://, https://, or paths. Pattern must match: ^(?:www\\.)?[a-zA-Z0-9][-a-zA-Z0-9]*(?:\\.[a-zA-Z0-9][-a-zA-Z0-9]*)*$",
       "editor": "textfield",
-      "pattern": "^(?:www\\.)?[a-zA-Z0-9][-a-zA-Z0-9]*(?:\\.[a-zA-Z0-9][-a-zA-Z0-9]*)*$",
-      "patternErrorMessage": "Invalid domain format. Use formats like: lkyurology.com, www.lkyurology.com, or lkyurology (no http://, https://, or paths)"
+      "pattern": "^(?:www\\.)?[a-zA-Z0-9][-a-zA-Z0-9]*(?:\\.[a-zA-Z0-9][-a-zA-Z0-9]*)*$"
     },
     "maxResults": {
       "title": "Max Results",
