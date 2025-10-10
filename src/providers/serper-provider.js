@@ -10,6 +10,8 @@ export class SerperSearchProvider extends BaseSearchProvider {
         this.baseUrl = 'https://google.serper.dev/search';
         this.maxRetries = 3;
         this.retryDelay = 1000; // 1 second
+        this.noResultsRetries = config.noResultsRetries ?? 2; // Retry 2 times when no results (configurable)
+        this.noResultsRetryDelay = config.noResultsRetryDelay ?? 2000; // 2 seconds between retries (configurable)
     }
 
     getName() {
@@ -153,22 +155,46 @@ export class SerperSearchProvider extends BaseSearchProvider {
 
         while (hasMoreResults) {
             try {
-                const results = await this.search(query, { ...options, page });
+                let results = await this.search(query, { ...options, page });
                 
+                // Retry logic when no results are returned
                 if (!results.items || results.items.length === 0) {
-                    // Yield empty result to signal we attempted the search
-                    yield {
-                        items: [],
-                        query,
-                        page: page + 1,
-                        totalResults: 0,
-                        hasMorePages: false,
-                        provider: this.getName(),
-                        mode: this.getMode(),
-                        timestamp: new Date().toISOString()
-                    };
-                    hasMoreResults = false;
-                    break;
+                    let retryAttempt = 0;
+                    
+                    while (retryAttempt < this.noResultsRetries) {
+                        retryAttempt++;
+                        console.warn(`  ⚠ No results returned for "${query}" (page ${page + 1}). Retry attempt ${retryAttempt}/${this.noResultsRetries}...`);
+                        
+                        // Wait before retrying
+                        await this.delay(this.noResultsRetryDelay);
+                        
+                        // Retry the search
+                        results = await this.search(query, { ...options, page });
+                        
+                        // If we got results after retry, break out of retry loop
+                        if (results.items && results.items.length > 0) {
+                            console.log(`  ✓ Retry successful! Got ${results.items.length} results.`);
+                            break;
+                        }
+                    }
+                    
+                    // If still no results after all retries
+                    if (!results.items || results.items.length === 0) {
+                        console.warn(`  ✗ No results after ${this.noResultsRetries} retries. Marking as not found.`);
+                        // Yield empty result to signal we attempted the search
+                        yield {
+                            items: [],
+                            query,
+                            page: page + 1,
+                            totalResults: 0,
+                            hasMorePages: false,
+                            provider: this.getName(),
+                            mode: this.getMode(),
+                            timestamp: new Date().toISOString()
+                        };
+                        hasMoreResults = false;
+                        break;
+                    }
                 }
 
                 yield results;

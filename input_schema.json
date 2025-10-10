@@ -73,6 +73,24 @@
       "description": "Directory path to save results (default: ./output)",
       "editor": "textfield",
       "default": "./output"
+    },
+    "noResultsRetries": {
+      "title": "No Results Retry Count",
+      "type": "integer",
+      "description": "Number of times to retry when API returns no results (default: 2)",
+      "editor": "number",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 10
+    },
+    "noResultsRetryDelay": {
+      "title": "No Results Retry Delay (ms)",
+      "type": "integer",
+      "description": "Delay in milliseconds between retries when no results (default: 2000)",
+      "editor": "number",
+      "default": 2000,
+      "minimum": 1000,
+      "maximum": 10000
     }
   },
   "required": []

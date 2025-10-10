@@ -32,7 +32,9 @@ if (!providerKey) {
 
 // Create provider instance based on mode
 const provider = providerFactory.createProviderByMode(mode, providerName, {
-    apiKey: providerKey
+    apiKey: providerKey,
+    noResultsRetries: input.noResultsRetries,
+    noResultsRetryDelay: input.noResultsRetryDelay
 });
 
 console.log(`Using provider: ${provider.getName()} (${mode} mode)`);
