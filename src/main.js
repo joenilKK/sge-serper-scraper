@@ -136,8 +136,9 @@ for (const query of queries) {
         // If domain mode was enabled and no match found across all pages, save a single not-found summary
         if (input.domain) {
             if (!domainFound) {
-                // Check if we reached max results without finding the domain
-                const reachedMaxResults = !isUnlimited && totalResults >= maxResults;
+                // If we got results but domain wasn't found, or if we got no results at all
+                // In both cases, mark as ">maxResults" since domain wasn't found in the checked range
+                const reachedMaxResults = !isUnlimited && (totalResults >= maxResults || totalResults === 0);
                 const noMatchData = await saveDomainNoMatchSummary(query, input.domain, outputDir, reachedMaxResults, maxResults);
                 // Push to Apify dataset if available
                 if (Actor) {
@@ -152,16 +153,24 @@ for (const query of queries) {
     } catch (error) {
         console.error(`✗ Error processing query "${query}":`, error.message);
         
-        // Store error result
-        await saveResultsToFile([{
-            title: '',
-            snippet: '',
-            link: '',
-            position: 0,
-            query: query,
-            page: 0,
-            error: error.message
-        }], query, 0, outputDir);
+        // If domain filtering is enabled, save a not-found summary with >maxResults
+        if (input.domain) {
+            const noMatchData = await saveDomainNoMatchSummary(query, input.domain, outputDir, true, maxResults);
+            if (Actor) {
+                await Actor.pushData(noMatchData);
+            }
+        } else {
+            // Store error result for non-domain queries
+            await saveResultsToFile([{
+                title: '',
+                snippet: '',
+                link: '',
+                position: 0,
+                query: query,
+                page: 0,
+                error: error.message
+            }], query, 0, outputDir);
+        }
     }
 }
 

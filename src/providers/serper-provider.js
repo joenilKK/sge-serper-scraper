@@ -156,6 +156,17 @@ export class SerperSearchProvider extends BaseSearchProvider {
                 const results = await this.search(query, { ...options, page });
                 
                 if (!results.items || results.items.length === 0) {
+                    // Yield empty result to signal we attempted the search
+                    yield {
+                        items: [],
+                        query,
+                        page: page + 1,
+                        totalResults: 0,
+                        hasMorePages: false,
+                        provider: this.getName(),
+                        mode: this.getMode(),
+                        timestamp: new Date().toISOString()
+                    };
                     hasMoreResults = false;
                     break;
                 }
