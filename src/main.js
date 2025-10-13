@@ -391,7 +391,7 @@ async function saveDomainMatchSummary(query, domain, match, outputDir, hasReache
     const filepath = path.join(outputDir, filename);
     
     // Format rank as ">maxResults" if we've reached the max results limit
-    const formattedRank = hasReachedMaxResults ? `>${maxResults}` : match.position;
+    const formattedRank = hasReachedMaxResults ? '>100' : match.position;
     
     const data = {
         keyword: query,
