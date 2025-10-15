@@ -14,7 +14,14 @@ try {
 }
 
 // Get input from Apify, command line arguments, or config file
+console.log('Getting input...');
 const input = await getInput();
+console.log('Input received:', { 
+    queries: input?.queries?.length || 0, 
+    provider: input?.provider, 
+    mode: input?.mode,
+    domain: input?.domain 
+});
 
 // Validate input
 if (!input) {
@@ -50,11 +57,13 @@ if (!providerKey) {
 }
 
 // Create provider instance based on mode
+console.log('Creating provider:', { mode, providerName });
 const provider = providerFactory.createProviderByMode(mode, providerName, {
     apiKey: providerKey,
     noResultsRetries: input.noResultsRetries,
     noResultsRetryDelay: input.noResultsRetryDelay
 });
+console.log('Provider created successfully');
 
 
 // Create output directory for storing results
@@ -118,8 +127,10 @@ if (Actor) {
 
 
 // Process each query
+console.log(`Starting to process ${queries.length} queries...`);
 for (let queryIndex = actorState.currentQueryIndex; queryIndex < queries.length; queryIndex++) {
     const query = queries[queryIndex];
+    console.log(`Processing query ${queryIndex + 1}/${queries.length}: "${query}"`);
     
     // Update current query index in state
     actorState.currentQueryIndex = queryIndex;
@@ -131,12 +142,13 @@ for (let queryIndex = actorState.currentQueryIndex; queryIndex < queries.length;
         // Track domain match state per query
         let domainFound = false;
 
+        console.log(`Starting paginated results for query: "${query}"`);
+        
         // Get paginated results
         for await (const result of provider.getPaginatedResults(query, searchOptions)) {
             pageCount++;
             totalResults += result.items.length;
-            
-            
+            console.log(`Page ${pageCount}: Got ${result.items.length} results (total: ${totalResults})`);
             
             // If domain filtering is enabled, try to find the first occurrence and early-stop.
             // When domain is specified, skip saving per-page files to keep exactly one JSON per query.
@@ -245,10 +257,21 @@ if (Actor) {
 async function getInput() {
     // First, check if running on Apify
     if (Actor) {
-        await Actor.init();
-        const apifyInput = await Actor.getInput();
-        if (apifyInput) {
-            return apifyInput;
+        try {
+            console.log('Initializing Apify Actor...');
+            await Actor.init();
+            console.log('Apify Actor initialized successfully');
+            
+            console.log('Getting input from Apify...');
+            const apifyInput = await Actor.getInput();
+            console.log('Apify input received:', apifyInput ? 'Yes' : 'No');
+            
+            if (apifyInput) {
+                return apifyInput;
+            }
+        } catch (error) {
+            console.error('Error initializing Apify Actor:', error.message);
+            throw error;
         }
     }
     

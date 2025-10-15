@@ -81,14 +81,21 @@ export class SerperSearchProvider extends BaseSearchProvider {
         
         for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
             try {
+                // Add timeout to prevent hanging
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+                
                 const response = await fetch(this.baseUrl, {
                     method: 'POST',
                     headers: {
                         'X-API-KEY': this.apiKey,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(requestBody)
+                    body: JSON.stringify(requestBody),
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
 
                 if (!response.ok) {
                     const errorText = await response.text();
@@ -100,7 +107,9 @@ export class SerperSearchProvider extends BaseSearchProvider {
 
             } catch (error) {
                 lastError = error;
-                console.warn(`Attempt ${attempt}/${this.maxRetries} failed for query "${query}", page ${page}:`, error.message);
+                const isTimeout = error.name === 'AbortError';
+                const errorMsg = isTimeout ? 'Request timeout (30s)' : error.message;
+                console.warn(`Attempt ${attempt}/${this.maxRetries} failed for query "${query}", page ${page}:`, errorMsg);
                 
                 if (attempt < this.maxRetries) {
                     await this.delay(this.retryDelay * attempt); // Exponential backoff
