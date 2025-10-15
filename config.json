@@ -9,5 +9,6 @@
   "location": "Singapore",
   "language": "en",
   "outputDir": "./output",
-  "providerKey": "418354aeb3b9d8ea19b7b446c1582ef1ffc6d05d"
+  "providerKey": "418354aeb3b9d8ea19b7b446c1582ef1ffc6d05d",
+  "testMigrationAfterSeconds": 10
 }

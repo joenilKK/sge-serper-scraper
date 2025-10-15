@@ -46,8 +46,8 @@ if (Actor) {
     }
 }
 
-// Debug mode for testing migrations
-const DEBUG_MODE = process.env.DEBUG_MIGRATION === 'true' || input.debugMigration === true;
+// Debug mode for testing migrations (always enabled)
+const DEBUG_MODE = true;
 const TEST_MIGRATION_AFTER_SECONDS = process.env.TEST_MIGRATION_AFTER_SECONDS || input.testMigrationAfterSeconds || 10;
 
 // Get configuration from environment variables
