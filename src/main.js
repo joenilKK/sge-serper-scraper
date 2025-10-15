@@ -105,7 +105,7 @@ console.log(`Processing ${queries.length} query(ies): ${queries.join(', ')}`);
 // Set up actor persistence event listeners
 if (Actor) {
     // Listen for migration events to save state
-    Actor.on('migrating', async () => {
+    process.on('SIGTERM', async () => {
         console.log('🔄 Actor migrating - saving current state...');
         actorState.migrationCount++;
         actorState.lastMigration = new Date().toISOString();
@@ -114,7 +114,7 @@ if (Actor) {
     });
 
     // Listen for periodic state persistence
-    Actor.on('persistState', async () => {
+    process.on('SIGUSR1', async () => {
         if (DEBUG_MODE) {
             console.log('💾 Periodic state persistence triggered');
         }
@@ -122,7 +122,7 @@ if (Actor) {
     });
 
     // Listen for abort events
-    Actor.on('aborting', async () => {
+    process.on('SIGINT', async () => {
         console.log('⚠️ Actor aborting - saving current state...');
         await Actor.setValue('ACTOR_STATE', actorState);
     });
@@ -141,11 +141,13 @@ if (DEBUG_MODE && TEST_MIGRATION_AFTER_SECONDS > 0 && Actor) {
             
             // Force save current state before migration
             console.log('💾 Saving current state before migration...');
+            actorState.migrationCount++;
+            actorState.lastMigration = new Date().toISOString();
             await Actor.setValue('ACTOR_STATE', actorState);
             
-            // Trigger the migration event
-            console.log('🚀 Emitting migration event...');
-            Actor.emit('migrating');
+            // Simulate migration by triggering the SIGTERM handler
+            console.log('🚀 Simulating migration event...');
+            process.emit('SIGTERM');
             
             console.log('✅ Timer-based migration simulation completed');
             console.log('📊 Migration count:', actorState.migrationCount);
