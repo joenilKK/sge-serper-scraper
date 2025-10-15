@@ -142,20 +142,31 @@ for (let queryIndex = actorState.currentQueryIndex; queryIndex < queries.length;
         // Track domain match state per query
         let domainFound = false;
 
-        console.log(`Starting paginated results for query: "${query}"`);
+        console.log(`Processing query: "${query}"`);
         
         // Get paginated results
         for await (const result of provider.getPaginatedResults(query, searchOptions)) {
             pageCount++;
             totalResults += result.items.length;
-            console.log(`Page ${pageCount}: Got ${result.items.length} results (total: ${totalResults})`);
+            const timestamp = new Date().toISOString();
+            console.log(`${timestamp}   Page ${pageCount}: ${result.items.length} results (Total: ${totalResults}/${maxResults})`);
+            
+            // Log individual items on the page
+            console.log(`${timestamp}     Items on page ${pageCount}:`);
+            result.items.forEach((item, index) => {
+                const domain = extractHostname(item.link);
+                const title = item.title.length > 50 ? item.title.substring(0, 50) + '...' : item.title;
+                console.log(`${timestamp}       [${index + 1}] Pos ${item.position}: ${domain} - ${title}`);
+            });
             
             // If domain filtering is enabled, try to find the first occurrence and early-stop.
             // When domain is specified, skip saving per-page files to keep exactly one JSON per query.
             if (input.domain) {
+                console.log(`${timestamp}     Checking for domain match: "${input.domain}"`);
                 const targetDomain = normalizeDomain(input.domain);
                 const match = findFirstDomainMatch(result.items, input.domain);
                 if (match) {
+                    console.log(`${timestamp}     ✓ Domain match found at position ${match.position}: ${match.link}`);
                     // Check if we've reached or exceeded max results
                     const hasReachedMaxResults = !isUnlimited && totalResults >= maxResults;
                     const matchData = await saveDomainMatchSummary(query, input.domain, match, outputDir, hasReachedMaxResults, maxResults);
@@ -165,6 +176,8 @@ for (let queryIndex = actorState.currentQueryIndex; queryIndex < queries.length;
                     }
                     domainFound = true;
                     break;
+                } else {
+                    console.log(`${timestamp}     ✗ No domain match found on this page`);
                 }
             } else {
                 // No domain filtering: store results per page
