@@ -105,8 +105,9 @@ console.log(`Processing ${queries.length} query(ies): ${queries.join(', ')}`);
 // Set up actor persistence event listeners
 if (Actor) {
     // Listen for migration events to save state
-    process.on('SIGTERM', async () => {
+    Actor.on('migrating', async (data) => {
         console.log('🔄 Actor migrating - saving current state...');
+        console.log(`⏰ Time remaining: ${data.timeRemainingSecs} seconds`);
         actorState.migrationCount++;
         actorState.lastMigration = new Date().toISOString();
         await Actor.setValue('ACTOR_STATE', actorState);
@@ -114,17 +115,25 @@ if (Actor) {
     });
 
     // Listen for periodic state persistence
-    process.on('SIGUSR1', async () => {
+    Actor.on('persistState', async (data) => {
         if (DEBUG_MODE) {
             console.log('💾 Periodic state persistence triggered');
+            console.log(`🔄 Is migrating: ${data.isMigrating}`);
         }
         await Actor.setValue('ACTOR_STATE', actorState);
     });
 
     // Listen for abort events
-    process.on('SIGINT', async () => {
+    Actor.on('aborting', async () => {
         console.log('⚠️ Actor aborting - saving current state...');
         await Actor.setValue('ACTOR_STATE', actorState);
+    });
+
+    // Listen for CPU info events
+    Actor.on('cpuInfo', (data) => {
+        if (data.isCpuOverloaded) {
+            console.log('⚠️ CPU overloaded - consider slowing down operations');
+        }
     });
 
 }
@@ -145,9 +154,8 @@ if (DEBUG_MODE && TEST_MIGRATION_AFTER_SECONDS > 0 && Actor) {
             actorState.lastMigration = new Date().toISOString();
             await Actor.setValue('ACTOR_STATE', actorState);
             
-            // Simulate migration by triggering the SIGTERM handler
-            console.log('🚀 Simulating migration event...');
-            process.emit('SIGTERM');
+            // Note: We cannot manually trigger system events - they come from Apify platform
+            console.log('🚀 Migration simulation completed (system events come from Apify platform)');
             
             console.log('✅ Timer-based migration simulation completed');
             console.log('📊 Migration count:', actorState.migrationCount);
