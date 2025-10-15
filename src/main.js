@@ -48,7 +48,7 @@ if (Actor) {
 
 // Debug mode for testing migrations
 const DEBUG_MODE = process.env.DEBUG_MIGRATION === 'true' || input.debugMigration === true;
-const TEST_MIGRATION_AFTER_SECONDS = process.env.TEST_MIGRATION_AFTER_SECONDS || input.testMigrationAfterSeconds || 60;
+const TEST_MIGRATION_AFTER_SECONDS = process.env.TEST_MIGRATION_AFTER_SECONDS || input.testMigrationAfterSeconds || 10;
 
 // Get configuration from environment variables
 const mode = input.mode || 'search';
@@ -132,12 +132,42 @@ if (Actor) {
 // Set up timer-based migration test (for debugging)
 if (DEBUG_MODE && TEST_MIGRATION_AFTER_SECONDS > 0 && Actor) {
     console.log(`⏰ DEBUG: Will simulate migration after ${TEST_MIGRATION_AFTER_SECONDS} seconds`);
-    setTimeout(async () => {
-        console.log(`🧪 DEBUG: Timer-based migration simulation triggered after ${TEST_MIGRATION_AFTER_SECONDS} seconds`);
-        console.log('🔄 Triggering migration event...');
-        Actor.emit('migrating');
-        console.log('✅ Timer-based migration simulation completed');
+    console.log('🔧 DEBUG: Migration test timer started...');
+    
+    const migrationTimer = setTimeout(async () => {
+        try {
+            console.log(`🧪 DEBUG: Timer-based migration simulation triggered after ${TEST_MIGRATION_AFTER_SECONDS} seconds`);
+            console.log('🔄 Triggering migration event...');
+            
+            // Force save current state before migration
+            console.log('💾 Saving current state before migration...');
+            await Actor.setValue('ACTOR_STATE', actorState);
+            
+            // Trigger the migration event
+            console.log('🚀 Emitting migration event...');
+            Actor.emit('migrating');
+            
+            console.log('✅ Timer-based migration simulation completed');
+            console.log('📊 Migration count:', actorState.migrationCount);
+            console.log('📊 Current query index:', actorState.currentQueryIndex);
+            console.log('📊 Total results:', actorState.totalResults);
+            
+            // Verify state was saved
+            const savedState = await Actor.getValue('ACTOR_STATE');
+            if (savedState) {
+                console.log('✅ State verification successful - migration state persisted');
+            } else {
+                console.log('❌ State verification failed - migration state not persisted');
+            }
+        } catch (error) {
+            console.error('❌ Migration test error:', error);
+        }
     }, TEST_MIGRATION_AFTER_SECONDS * 1000);
+    
+    // Store timer reference for potential cleanup
+    if (typeof global !== 'undefined') {
+        global.migrationTimer = migrationTimer;
+    }
 }
 
 // Process each query
