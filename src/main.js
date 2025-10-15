@@ -48,8 +48,7 @@ if (Actor) {
 
 // Debug mode for testing migrations
 const DEBUG_MODE = process.env.DEBUG_MIGRATION === 'true' || input.debugMigration === true;
-const TEST_MIGRATION_AFTER_QUERY = process.env.TEST_MIGRATION_AFTER_QUERY || input.testMigrationAfterQuery || 0;
-const TEST_MIGRATION_AFTER_SECONDS = process.env.TEST_MIGRATION_AFTER_SECONDS || input.testMigrationAfterSeconds || 0;
+const TEST_MIGRATION_AFTER_SECONDS = process.env.TEST_MIGRATION_AFTER_SECONDS || input.testMigrationAfterSeconds || 60;
 
 // Get configuration from environment variables
 const mode = input.mode || 'search';
@@ -128,16 +127,6 @@ if (Actor) {
         await Actor.setValue('ACTOR_STATE', actorState);
     });
 
-    // Debug: Listen for all system events
-    if (DEBUG_MODE) {
-        Actor.on('systemInfo', (info) => {
-            console.log('🔍 System Info:', info);
-        });
-        
-        Actor.on('cpuInfo', (info) => {
-            console.log('💻 CPU Info:', info);
-        });
-    }
 }
 
 // Set up timer-based migration test (for debugging)
@@ -248,15 +237,6 @@ for (let queryIndex = actorState.currentQueryIndex; queryIndex < queries.length;
             await Actor.setValue('ACTOR_STATE', actorState);
         }
         
-        // Test migration simulation (for debugging)
-        if (DEBUG_MODE && TEST_MIGRATION_AFTER_QUERY > 0 && queryIndex + 1 === TEST_MIGRATION_AFTER_QUERY) {
-            console.log(`🧪 DEBUG: Simulating migration after query ${queryIndex + 1}`);
-            console.log('🔄 Triggering migration event...');
-            Actor.emit('migrating');
-            console.log('✅ Migration simulation completed - actor should resume from next query');
-            // In a real scenario, the actor would restart here
-            // For testing, we continue but log the simulation
-        }
         
     } catch (error) {
         console.error(`✗ Error processing query "${query}":`, error.message);
@@ -372,9 +352,6 @@ async function getInput() {
                     break;
                 case '--debug-migration':
                     input.debugMigration = args[++i] === 'true';
-                    break;
-                case '--test-migration-after-query':
-                    input.testMigrationAfterQuery = parseInt(args[++i]);
                     break;
                 case '--test-migration-after-seconds':
                     input.testMigrationAfterSeconds = parseInt(args[++i]);
@@ -539,42 +516,3 @@ async function saveDomainMatchSummary(query, domain, match, outputDir, hasReache
     return data;
 }
 
-// Debug function to test migration handling
-async function testMigrationHandling() {
-    if (!Actor) {
-        console.log('⚠️ Migration testing only available when running on Apify');
-        return;
-    }
-    
-    console.log('🧪 Testing migration handling...');
-    
-    // Save current state
-    await Actor.setValue('ACTOR_STATE', actorState);
-    console.log('✅ State saved for migration test');
-    
-    // Simulate migration event
-    console.log('🔄 Simulating migration event...');
-    Actor.emit('migrating');
-    
-    // Wait a moment for the event to process
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Verify state was saved
-    const savedState = await Actor.getValue('ACTOR_STATE');
-    if (savedState) {
-        console.log('✅ Migration test successful - state persisted correctly');
-        console.log('📊 Saved state:', {
-            processedQueries: savedState.processedQueries.length,
-            currentQueryIndex: savedState.currentQueryIndex,
-            totalResults: savedState.totalResults,
-            migrationCount: savedState.migrationCount
-        });
-    } else {
-        console.log('❌ Migration test failed - state not persisted');
-    }
-}
-
-// Export debug function for external testing
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { testMigrationHandling };
-}
