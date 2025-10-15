@@ -21,6 +21,27 @@ if (!input) {
     throw new Error('No input provided. Please provide search queries.');
 }
 
+// Initialize actor state persistence
+let actorState = {
+    processedQueries: [],
+    currentQueryIndex: 0,
+    totalResults: 0,
+    startTime: new Date().toISOString()
+};
+
+// Load previous state if available (when running on Apify)
+if (Actor) {
+    const previousState = await Actor.getValue('ACTOR_STATE');
+    if (previousState) {
+        actorState = { ...actorState, ...previousState };
+        console.log('Resuming from previous state:', {
+            processedQueries: actorState.processedQueries.length,
+            currentQueryIndex: actorState.currentQueryIndex,
+            totalResults: actorState.totalResults
+        });
+    }
+}
+
 // Get configuration from environment variables
 const mode = input.mode || 'search';
 const providerName = input.provider || 'serper';
@@ -73,9 +94,27 @@ const isUnlimited = maxResults === 0;
 
 console.log(`Processing ${queries.length} query(ies): ${queries.join(', ')}`);
 
+// Set up actor persistence event listeners
+if (Actor) {
+    // Listen for migration events to save state
+    Actor.on('migrating', async () => {
+        console.log('Actor migrating - saving current state...');
+        await Actor.setValue('ACTOR_STATE', actorState);
+    });
+
+    // Listen for periodic state persistence
+    Actor.on('persistState', async () => {
+        await Actor.setValue('ACTOR_STATE', actorState);
+    });
+}
+
 // Process each query
-for (const query of queries) {
-    console.log(`\nProcessing query: "${query}"`);
+for (let queryIndex = actorState.currentQueryIndex; queryIndex < queries.length; queryIndex++) {
+    const query = queries[queryIndex];
+    console.log(`\nProcessing query ${queryIndex + 1}/${queries.length}: "${query}"`);
+    
+    // Update current query index in state
+    actorState.currentQueryIndex = queryIndex;
     
     try {
         let totalResults = 0;
@@ -152,6 +191,20 @@ for (const query of queries) {
             console.log(`✓ Completed query "${query}": ${totalResults} total results across ${pageCount} pages`);
         }
         
+        // Update actor state with completed query
+        actorState.processedQueries.push({
+            query: query,
+            totalResults: totalResults,
+            pageCount: pageCount,
+            completedAt: new Date().toISOString()
+        });
+        actorState.totalResults += totalResults;
+        
+        // Save state after each query completion
+        if (Actor) {
+            await Actor.setValue('ACTOR_STATE', actorState);
+        }
+        
     } catch (error) {
         console.error(`✗ Error processing query "${query}":`, error.message);
         
@@ -173,14 +226,28 @@ for (const query of queries) {
                 error: error.message
             }], query, 0, outputDir);
         }
+        
+        // Update actor state with error
+        actorState.processedQueries.push({
+            query: query,
+            error: error.message,
+            failedAt: new Date().toISOString()
+        });
+        
+        // Save state after error
+        if (Actor) {
+            await Actor.setValue('ACTOR_STATE', actorState);
+        }
     }
 }
 
 console.log('\n🎉 All queries processed successfully!');
-// console.log(`Results saved to: ${outputDir}`);
+console.log(`Total results processed: ${actorState.totalResults}`);
+console.log(`Queries completed: ${actorState.processedQueries.length}`);
 
-// Exit Apify actor if running on Apify
+// Clear actor state on successful completion
 if (Actor) {
+    await Actor.setValue('ACTOR_STATE', null);
     await Actor.exit();
 }
 
