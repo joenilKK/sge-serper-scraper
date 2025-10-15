@@ -36,19 +36,9 @@ if (Actor) {
     const previousState = await Actor.getValue('ACTOR_STATE');
     if (previousState) {
         actorState = { ...actorState, ...previousState };
-        console.log('Resuming from previous state:', {
-            processedQueries: actorState.processedQueries.length,
-            currentQueryIndex: actorState.currentQueryIndex,
-            totalResults: actorState.totalResults,
-            migrationCount: actorState.migrationCount,
-            lastMigration: actorState.lastMigration
-        });
     }
 }
 
-// Debug mode for testing migrations (always enabled)
-const DEBUG_MODE = true;
-const TEST_MIGRATION_AFTER_SECONDS = process.env.TEST_MIGRATION_AFTER_SECONDS || input.testMigrationAfterSeconds || 10;
 
 // Get configuration from environment variables
 const mode = input.mode || 'search';
@@ -66,7 +56,6 @@ const provider = providerFactory.createProviderByMode(mode, providerName, {
     noResultsRetryDelay: input.noResultsRetryDelay
 });
 
-console.log(`Using provider: ${provider.getName()} (${mode} mode)`);
 
 // Create output directory for storing results
 const outputDir = input.outputDir || './output';
@@ -100,90 +89,37 @@ const searchOptions = {
 // Handle unlimited results (0 means unlimited)
 const isUnlimited = maxResults === 0;
 
-console.log(`Processing ${queries.length} query(ies): ${queries.join(', ')}`);
 
 // Set up actor persistence event listeners
 if (Actor) {
     // Listen for migration events to save state
     Actor.on('migrating', async (data) => {
-        console.log('🔄 Actor migrating - saving current state...');
-        console.log(`⏰ Time remaining: ${data.timeRemainingSecs} seconds`);
         actorState.migrationCount++;
         actorState.lastMigration = new Date().toISOString();
         await Actor.setValue('ACTOR_STATE', actorState);
-        console.log(`📊 Migration #${actorState.migrationCount} - State saved successfully`);
     });
 
     // Listen for periodic state persistence
     Actor.on('persistState', async (data) => {
-        if (DEBUG_MODE) {
-            console.log('💾 Periodic state persistence triggered');
-            console.log(`🔄 Is migrating: ${data.isMigrating}`);
-        }
         await Actor.setValue('ACTOR_STATE', actorState);
     });
 
     // Listen for abort events
     Actor.on('aborting', async () => {
-        console.log('⚠️ Actor aborting - saving current state...');
         await Actor.setValue('ACTOR_STATE', actorState);
     });
 
     // Listen for CPU info events
     Actor.on('cpuInfo', (data) => {
-        if (data.isCpuOverloaded) {
-            console.log('⚠️ CPU overloaded - consider slowing down operations');
-        }
+        // CPU monitoring handled silently
     });
 
 }
 
-// Set up timer-based migration test (for debugging)
-if (DEBUG_MODE && TEST_MIGRATION_AFTER_SECONDS > 0 && Actor) {
-    console.log(`⏰ DEBUG: Will simulate migration after ${TEST_MIGRATION_AFTER_SECONDS} seconds`);
-    console.log('🔧 DEBUG: Migration test timer started...');
-    
-    const migrationTimer = setTimeout(async () => {
-        try {
-            console.log(`🧪 DEBUG: Timer-based migration simulation triggered after ${TEST_MIGRATION_AFTER_SECONDS} seconds`);
-            console.log('🔄 Triggering migration event...');
-            
-            // Force save current state before migration
-            console.log('💾 Saving current state before migration...');
-            actorState.migrationCount++;
-            actorState.lastMigration = new Date().toISOString();
-            await Actor.setValue('ACTOR_STATE', actorState);
-            
-            // Note: We cannot manually trigger system events - they come from Apify platform
-            console.log('🚀 Migration simulation completed (system events come from Apify platform)');
-            
-            console.log('✅ Timer-based migration simulation completed');
-            console.log('📊 Migration count:', actorState.migrationCount);
-            console.log('📊 Current query index:', actorState.currentQueryIndex);
-            console.log('📊 Total results:', actorState.totalResults);
-            
-            // Verify state was saved
-            const savedState = await Actor.getValue('ACTOR_STATE');
-            if (savedState) {
-                console.log('✅ State verification successful - migration state persisted');
-            } else {
-                console.log('❌ State verification failed - migration state not persisted');
-            }
-        } catch (error) {
-            console.error('❌ Migration test error:', error);
-        }
-    }, TEST_MIGRATION_AFTER_SECONDS * 1000);
-    
-    // Store timer reference for potential cleanup
-    if (typeof global !== 'undefined') {
-        global.migrationTimer = migrationTimer;
-    }
-}
 
 // Process each query
 for (let queryIndex = actorState.currentQueryIndex; queryIndex < queries.length; queryIndex++) {
     const query = queries[queryIndex];
-    console.log(`\nProcessing query ${queryIndex + 1}/${queries.length}: "${query}"`);
     
     // Update current query index in state
     actorState.currentQueryIndex = queryIndex;
@@ -200,24 +136,12 @@ for (let queryIndex = actorState.currentQueryIndex; queryIndex < queries.length;
             pageCount++;
             totalResults += result.items.length;
             
-            if (isUnlimited) {
-                console.log(`  Page ${result.page}: ${result.items.length} results (Total: ${totalResults})`);
-            } else {
-                console.log(`  Page ${result.page}: ${result.items.length} results (Total: ${totalResults}/${maxResults})`);
-            }
             
-            // Log each item in the current page
-            console.log(`    Items on page ${result.page}:`);
-            result.items.forEach((item, idx) => {
-                const host = extractHostname(item.link || '');
-                console.log(`      [${idx + 1}] Pos ${item.position}: ${host} - ${item.title?.substring(0, 50) || 'No title'}...`);
-            });
             
             // If domain filtering is enabled, try to find the first occurrence and early-stop.
             // When domain is specified, skip saving per-page files to keep exactly one JSON per query.
             if (input.domain) {
                 const targetDomain = normalizeDomain(input.domain);
-                console.log(`    Checking for domain match: "${targetDomain}"`);
                 const match = findFirstDomainMatch(result.items, input.domain);
                 if (match) {
                     // Check if we've reached or exceeded max results
@@ -227,7 +151,6 @@ for (let queryIndex = actorState.currentQueryIndex; queryIndex < queries.length;
                     if (Actor) {
                         await Actor.pushData(matchData);
                     }
-                    console.log(`  ✓ Domain match found for "${input.domain}" on page ${result.page} at position ${match.position}. Stopping this query.`);
                     domainFound = true;
                     break;
                 }
@@ -238,7 +161,6 @@ for (let queryIndex = actorState.currentQueryIndex; queryIndex < queries.length;
             
             // Check if we've reached the max results limit (skip if unlimited)
             if (!isUnlimited && totalResults >= maxResults) {
-                console.log(`  ✓ Reached max results limit (${maxResults}) for query "${query}"`);
                 break;
             }
             
@@ -257,10 +179,8 @@ for (let queryIndex = actorState.currentQueryIndex; queryIndex < queries.length;
                 if (Actor) {
                     await Actor.pushData(noMatchData);
                 }
-                console.log(`  ✗ No results matched domain "${input.domain}". Wrote not-found summary.`);
             }
         } else {
-            console.log(`✓ Completed query "${query}": ${totalResults} total results across ${pageCount} pages`);
         }
         
         // Update actor state with completed query
@@ -279,7 +199,7 @@ for (let queryIndex = actorState.currentQueryIndex; queryIndex < queries.length;
         
         
     } catch (error) {
-        console.error(`✗ Error processing query "${query}":`, error.message);
+        console.error(`Error processing query "${query}":`, error.message);
         
         // If domain filtering is enabled, save a not-found summary with >maxResults
         if (input.domain) {
@@ -314,13 +234,6 @@ for (let queryIndex = actorState.currentQueryIndex; queryIndex < queries.length;
     }
 }
 
-console.log('\n🎉 All queries processed successfully!');
-console.log(`Total results processed: ${actorState.totalResults}`);
-console.log(`Queries completed: ${actorState.processedQueries.length}`);
-if (actorState.migrationCount > 0) {
-    console.log(`Migration count: ${actorState.migrationCount}`);
-    console.log(`Last migration: ${actorState.lastMigration}`);
-}
 
 // Clear actor state on successful completion
 if (Actor) {
@@ -335,7 +248,6 @@ async function getInput() {
         await Actor.init();
         const apifyInput = await Actor.getInput();
         if (apifyInput) {
-            console.log('Using Apify input');
             return apifyInput;
         }
     }
@@ -414,7 +326,6 @@ async function getInput() {
     }
     
     // Return default config if no input found
-    console.log('No input found. Please provide queries in config.json or via command line.');
     return {
         queries: [],
         provider: 'serper',
@@ -440,7 +351,6 @@ async function saveResultsToFile(items, query, page, outputDir) {
     
     // Save to file system
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
-    console.log(`  📁 Saved ${items.length} results to: ${filename}`);
     
     // Push each item to Apify dataset if available
     if (Actor) {
@@ -474,7 +384,6 @@ async function saveDomainNoMatchSummary(query, domain, outputDir, reachedMaxResu
         timestamp: new Date().toISOString()
     };
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
-    //console.log(`  🔎 Saved domain not-found summary: ${filename}`);
     return data;
 }
 
@@ -522,7 +431,6 @@ function findFirstDomainMatch(items, domain) {
         
         if (exactMatch || subdomainMatch || partialMatch) {
             let matchType = exactMatch ? 'exact' : (subdomainMatch ? 'subdomain' : 'partial');
-            console.log(`      ✓ MATCH FOUND: "${host}" matches "${target}" (${matchType})`);
             return {
                 link: item.link || '',
                 title: item.title || '',
@@ -552,7 +460,6 @@ async function saveDomainMatchSummary(query, domain, match, outputDir, hasReache
         timestamp: new Date().toISOString()
     };
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
-    // console.log(`  🔎 Saved domain match summary: ${filename}`);
     return data;
 }
 
