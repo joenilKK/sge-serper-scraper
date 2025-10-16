@@ -409,7 +409,7 @@ async function saveDomainNoMatchSummary(query, domain, outputDir, reachedMaxResu
     const filepath = path.join(outputDir, filename);
     
     // If we reached max results without finding the domain, show ">maxResults" instead of null
-    const rankValue = reachedMaxResults ? `>${maxResults}` : null;
+    const rankValue = reachedMaxResults ? `>${maxResults}` : '>100';
     
     const data = {
         keyword: query,
