@@ -401,7 +401,7 @@ async function saveResultsToFile(items, query, page, outputDir) {
     }
 }
 
-async function saveDomainNoMatchSummary(query, domain, outputDir, reachedMaxResults = false, maxResults = 100) {
+async function saveDomainNoMatchSummary(query, domain, outputDir, reachedMaxResults = false, maxResults = 60) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const safeQuery = query.replace(/[^a-zA-Z0-9]/g, '_');
     const safeDomain = normalizeDomain(domain).replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -409,7 +409,7 @@ async function saveDomainNoMatchSummary(query, domain, outputDir, reachedMaxResu
     const filepath = path.join(outputDir, filename);
     
     // If we reached max results without finding the domain, show ">maxResults" instead of null
-    const rankValue = reachedMaxResults ? `>${maxResults}` : '>100';
+    const rankValue = reachedMaxResults ? `>${maxResults}` : '>60';
     
     const data = {
         keyword: query,
@@ -477,7 +477,7 @@ function findFirstDomainMatch(items, domain) {
     return null;
 }
 
-async function saveDomainMatchSummary(query, domain, match, outputDir, hasReachedMaxResults = false, maxResults = 100) {
+async function saveDomainMatchSummary(query, domain, match, outputDir, hasReachedMaxResults = false, maxResults = 60) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const safeQuery = query.replace(/[^a-zA-Z0-9]/g, '_');
     const safeDomain = normalizeDomain(domain).replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -485,7 +485,7 @@ async function saveDomainMatchSummary(query, domain, match, outputDir, hasReache
     const filepath = path.join(outputDir, filename);
     
     // Format rank as ">maxResults" if we've reached the max results limit
-    const formattedRank = hasReachedMaxResults ? '>100' : match.position;
+    const formattedRank = hasReachedMaxResults ? '>60' : match.position;
     
     const data = {
         keyword: query,
